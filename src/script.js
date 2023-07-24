@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import * as dat from 'lil-gui'
 import waterVertexShader from './Shaders/Water/vertex.glsl'
 import waterFragmentShader from './Shaders/Water/fragment.glsl' 
+import {RGBELoader} from 'three/examples/jsm/loaders/RGBELoader.js'
 
 THREE.ColorManagement.enabled = false
 
@@ -18,11 +19,19 @@ const canvas = document.querySelector('canvas.webgl')
 // Scene
 const scene = new THREE.Scene()
 
+//environment map
+const rgbeLoader = new RGBELoader();
+rgbeLoader.load('/envMap3.hdr', (envMap)=>
+{
+  envMap.mapping= THREE.EquirectangularReflectionMapping
+
+  scene.background = envMap
+})
 /**
  * Water
  */
 // Geometry
-const waterGeometry = new THREE.PlaneGeometry(4, 4, 1024, 1024)
+const waterGeometry = new THREE.PlaneGeometry(8, 8, 1024, 1024)
 
 // color 
 debugObject.depthColor = '#15577a'
@@ -35,9 +44,9 @@ const waterMaterial = new THREE.ShaderMaterial({
     fragmentShader: waterFragmentShader, 
      uniforms: {
         uTime: {value: 0},
-        uBigWavesElevation: {value :0.2}, 
-        uBigWavesFrequency: {value : new THREE.Vector2( 3, 2)}, 
-        uBigWavesSpeed:{value :0.75},
+        uBigWavesElevation: {value :0.1}, 
+        uBigWavesFrequency: {value : new THREE.Vector2( 2.5, 1.6)}, 
+        uBigWavesSpeed:{value :0.6},
 
         uSmallWaveElevation: {value :0.15},
         uSmallWaveFrequency: {value :2.0},
@@ -111,7 +120,8 @@ window.addEventListener('resize', () =>
 const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100)
 camera.position.set(1, 1, 1)
 scene.add(camera)
-
+scene.background = new THREE.Color('#a8feff')
+gui.addColor(scene, 'background')
 // Controls
 const controls = new OrbitControls(camera, canvas)
 controls.enableDamping = true
@@ -124,7 +134,6 @@ const renderer = new THREE.WebGLRenderer({
 })
 renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-
 /**
  * Animate
  */
