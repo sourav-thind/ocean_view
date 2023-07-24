@@ -4,6 +4,7 @@ import * as dat from 'lil-gui'
 import waterVertexShader from './Shaders/Water/vertex.glsl'
 import waterFragmentShader from './Shaders/Water/fragment.glsl' 
 import {RGBELoader} from 'three/examples/jsm/loaders/RGBELoader.js'
+import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 THREE.ColorManagement.enabled = false
 
@@ -11,7 +12,9 @@ THREE.ColorManagement.enabled = false
  * Base
  */
 // Debug
-const gui = new dat.GUI({ width: 340 })
+const gui = new dat.GUI({ width: 340})
+gui.open(false)
+
 const debugObject = {}
 // Canvas
 const canvas = document.querySelector('canvas.webgl')
@@ -19,24 +22,29 @@ const canvas = document.querySelector('canvas.webgl')
 // Scene
 const scene = new THREE.Scene()
 
+//fog 
+const fog = new THREE.Fog('#000000', 10, 12);
+scene.fog = fog
+
 //environment map
 const rgbeLoader = new RGBELoader();
-rgbeLoader.load('/envMap3.hdr', (envMap)=>
+rgbeLoader.load('/envMap.hdr', (envMap)=>
 {
   envMap.mapping= THREE.EquirectangularReflectionMapping
-
+    envMap.rotation = Math.PI
   scene.background = envMap
+  scene.environment = envMap
 })
 /**
  * Water
  */
 // Geometry
-const waterGeometry = new THREE.PlaneGeometry(8, 8, 1024, 1024)
+const waterGeometry = new THREE.PlaneGeometry(32, 32, 1024, 1024)
 
 // color 
-debugObject.depthColor = '#15577a'
-debugObject.surfaceColor = '#2382be'
-// Material
+debugObject.depthColor = '#4c79c2'
+debugObject.surfaceColor = '#5e8dd9'
+// Material 
 const waterMaterial = new THREE.ShaderMaterial({
     side:2,
   
@@ -88,8 +96,22 @@ gui.add(waterMaterial.uniforms.uSmallWaveIteration, 'value').min(0).max(10).step
 // Mesh
 const water = new THREE.Mesh(waterGeometry, waterMaterial)
 water.rotation.x = - Math.PI * 0.5
+water.rotation.z =  Math.PI * 0.5
+water.position.y = -0.5
 scene.add(water)
 
+let model = null
+//model
+const gltfLoader = new GLTFLoader();
+
+gltfLoader.load('/Ship_Model.glb', (gltf)=>
+{
+    model = gltf.scene
+    model.scale.set(0.03, 0.03, 0.03)
+    model.position.set(0, -0.5, 0)
+    model.rotation.set(0, 1.56, 0)
+   scene.add(model);
+})
 /**
  * Sizes
  */
@@ -106,6 +128,7 @@ window.addEventListener('resize', () =>
 
     // Update camera
     camera.aspect = sizes.width / sizes.height
+    
     camera.updateProjectionMatrix()
 
     // Update renderer
@@ -118,13 +141,23 @@ window.addEventListener('resize', () =>
  */
 // Base camera
 const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100)
-camera.position.set(1, 1, 1)
+camera.position.set(1, 0.15, 0.5)
 scene.add(camera)
-scene.background = new THREE.Color('#a8feff')
-gui.addColor(scene, 'background')
+// scene.background = new THREE.Color('#a8feff')
+// gui.addColor(scene, 'background')
+
 // Controls
 const controls = new OrbitControls(camera, canvas)
 controls.enableDamping = true
+controls.enableZoom = false
+
+controls.addEventListener( 'change', function(){
+    //...
+    this.target.y = 0;
+    camera.position.y = 0;
+    //...
+ }
+)
 
 /**
  * Renderer
@@ -143,11 +176,18 @@ const tick = () =>
 {
     const elapsedTime = clock.getElapsedTime()
 
+    //model 
+    if(model){
+    model.position.x = Math.cos(elapsedTime*0.02)*4
+    model.position.z = Math.sin(elapsedTime*0.02)*4
+
+    }
+
     //updating time 
     waterMaterial.uniforms.uTime.value = elapsedTime
     // Update controls
     controls.update()
-
+   
     // Render
     renderer.render(scene, camera)
 
